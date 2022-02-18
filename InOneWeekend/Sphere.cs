@@ -7,10 +7,7 @@ public class Sphere :  Hittable
     public Vector3 Center { get; }
     public float Radius { get; }
     public Material Material { get; }
-
-    public Sphere()
-    { }
-
+    
     public Sphere(Point center, float radius, Material material)
     {
         Center = center;

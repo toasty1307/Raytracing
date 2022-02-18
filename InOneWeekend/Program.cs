@@ -11,7 +11,7 @@ namespace InOneWeekend;
 public class Program
 {
     public const float AspectRatio = 16f / 9f;
-    public const int ImageWidth = 1920;
+    public const int ImageWidth = 1920 * 4;
     public const int ImageHeight = (int) (ImageWidth / AspectRatio);
     
     public const int SamplesPerPixel = 200;
@@ -112,9 +112,13 @@ public class Program
             if (percent != lastPercent)
             {
                 if (n == 1)
+                {
                     Log.Information("Approximate time remaining: {Time}", (DateTime.Now - time) * (ImageHeight - n));
+                    Console.WriteLine();
+                }
                 Log.Information("Completed {N}%", lastPercent = percent);
                 MoveCursor();
+                bitmap.SaveAsPng($"output{n}.png");
             }
         });
 
