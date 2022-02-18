@@ -1,10 +1,11 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Serilog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.IO;
 
 namespace InOneWeekend;
 
@@ -118,6 +119,8 @@ public class Program
                 }
                 Log.Information("Completed {N}%", lastPercent = percent);
                 MoveCursor();
+                if (File.Exists($"output{y - 1}.png"))
+                    File.Delete($"output{y - 1}.png");
                 bitmap.SaveAsPng($"output{y}.png");
             }
         });
