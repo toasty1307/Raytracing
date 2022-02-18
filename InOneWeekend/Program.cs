@@ -15,10 +15,10 @@ public class Program
     public const int ImageHeight = (int) (ImageWidth / AspectRatio);
     
     public const int SamplesPerPixel = 50;
-    public const int MaxDepth = 2;
+    public const int MaxDepth = 3;
 
     public readonly Color SkyColor = new(0.5f, 0.7f, 1f);
-    public readonly Random Random = new();
+    private readonly Random _random = new();
 
     public static void Main()
     {
@@ -43,8 +43,12 @@ public class Program
         
         if (world.Hit(ray, 0.001f, float.PositiveInfinity, ref rec))
         {
-            var target = rec.Point + Random.NextInHemisphere(rec.Normal);
-            return 0.5f * RayColor(new Ray(rec.Point, target - rec.Point), world, depth - 1);
+            var scattered = new Ray();
+            var attenuation = new Color();
+            if (rec.Material.Scatter(ray, rec, ref attenuation, ref scattered))
+                return attenuation * RayColor(scattered, world, depth - 1);
+            
+            return Color.Zero;
         }
         var unitDirection = ray.Direction.Normalized();
         var t = unitDirection.Y / 2 + .5f;
@@ -59,8 +63,17 @@ public class Program
         var bitmap = new Image<Rgba32>(ImageWidth, ImageHeight);
 
         var world = new HittableList();
-        world.Add(new Sphere(new Point(0, 0, -1), 0.5f));
-        world.Add(new Sphere(new Point(0, -100.5f, -1), 100));
+
+        var materialGround = new Lambertian(new Color(0.8f, 0.8f, 0.0f));
+        var materialCenter = new Lambertian(new Color(0.7f, 0.3f, 0.3f));
+        
+        var materialLeft   = new      Metal(new Color(0.8f, 0.8f, 0.8f), 0.3f);
+        var materialRight  = new      Metal(new Color(0.8f, 0.6f, 0.2f), 1.0f);
+        
+        world.Add(new Sphere(new Vector3( 0, -100.5f, -1), 100f, materialGround));
+        world.Add(new Sphere(new Vector3( 0,       0, -1), 0.5f, materialCenter));
+        world.Add(new Sphere(new Vector3(-1,       0, -1), 0.5f,   materialLeft));
+        world.Add(new Sphere(new Vector3( 1,       0, -1), 0.5f,  materialRight));
         
         var camera = new Camera();
         
@@ -74,8 +87,8 @@ public class Program
                 var color = Color.Zero;
                 for (var k = 0; k < SamplesPerPixel; k++)
                 {
-                    var u = (float) (i + Random.NextDouble()) / (ImageWidth - 1);
-                    var v = (float) (j + Random.NextDouble()) / (ImageHeight - 1);
+                    var u = (float) (i + _random.NextDouble()) / (ImageWidth - 1);
+                    var v = (float) (j + _random.NextDouble()) / (ImageHeight - 1);
                     var ray = camera.GetRay(u, v);
                     color += RayColor(ray, world, MaxDepth);
                 }

@@ -1,10 +1,14 @@
-﻿using System.Diagnostics;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace InOneWeekend;
 
 public static class Extenions
 {
+    public static Vector3 Reflect(this Vector3 vector3, Vector3 normal)
+    {
+        return vector3 - 2 * Vector3.Dot(vector3, normal) * normal;
+    }
+    public static bool NearZero(this Vector3 vector3) => MathF.Abs(vector3.X) < float.Epsilon && MathF.Abs(vector3.Y) < float.Epsilon && MathF.Abs(vector3.Z) < float.Epsilon;
     public static Vector3 Normalized(this Vector3 a) => Vector3.Normalize(a);
     public static float NextSingle(this Random random, float minInclusive, float maxExclusive) => minInclusive + (float)random.NextDouble() * (maxExclusive - minInclusive);
     public static Vector3 NextVector3(this Random random, float minInclusive, float maxExclusive) => new Vector3(random.NextSingle(minInclusive, maxExclusive), random.NextSingle(minInclusive, maxExclusive), random.NextSingle(minInclusive, maxExclusive));

@@ -4,16 +4,18 @@ namespace InOneWeekend;
 
 public class Sphere :  Hittable
 {
-    public Vector3 Center { get; private set; }
-    public float Radius { get; private set; }
+    public Vector3 Center { get; }
+    public float Radius { get; }
+    public Material Material { get; }
 
     public Sphere()
     { }
 
-    public Sphere(Point center, float radius)
+    public Sphere(Point center, float radius, Material material)
     {
         Center = center;
         Radius = radius;
+        Material = material;
     }
 
     public override bool Hit(Ray ray, float tMin, float tMax, ref HitRecord record)
@@ -38,6 +40,7 @@ public class Sphere :  Hittable
         record.Point = ray.At(root);
         var outwardNormal = (record.Point - Center) / Radius;
         record.SetFaceNormal(ray, outwardNormal);
+        record.Material = Material;
         
         return true;
     }
