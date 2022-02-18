@@ -15,7 +15,7 @@ public class Program
     public const int ImageHeight = (int) (ImageWidth / AspectRatio);
     
     public const int SamplesPerPixel = 50;
-    public const int MaxDepth = 3;
+    public const int MaxDepth = 50;
 
     public readonly Color SkyColor = new(0.5f, 0.7f, 1f);
     private readonly Random _random = new();
@@ -65,14 +65,16 @@ public class Program
         var world = new HittableList();
 
         var materialGround = new Lambertian(new Color(0.8f, 0.8f, 0.0f));
-        var materialCenter = new Lambertian(new Color(0.7f, 0.3f, 0.3f));
+        var materialCenter = new Lambertian(new Color(0.1f, 0.2f, 0.5f));
         
-        var materialLeft   = new      Metal(new Color(0.8f, 0.8f, 0.8f), 0.3f);
-        var materialRight  = new      Metal(new Color(0.8f, 0.6f, 0.2f), 1.0f);
+        var materialLeft   = new Dielectric(1.5f);
+        
+        var materialRight  = new      Metal(new Color(0.8f, 0.6f, 0.2f), 0.0f);
         
         world.Add(new Sphere(new Vector3( 0, -100.5f, -1), 100f, materialGround));
         world.Add(new Sphere(new Vector3( 0,       0, -1), 0.5f, materialCenter));
         world.Add(new Sphere(new Vector3(-1,       0, -1), 0.5f,   materialLeft));
+        world.Add(new Sphere(new Vector3(-1,       0, -1),-0.4f,   materialLeft));
         world.Add(new Sphere(new Vector3( 1,       0, -1), 0.5f,  materialRight));
         
         var camera = new Camera();
