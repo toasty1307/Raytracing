@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using Serilog;
 using SixLabors.ImageSharp;
@@ -14,11 +13,10 @@ public class Program
     public const int ImageWidth = 1920;
     public const int ImageHeight = (int) (ImageWidth / AspectRatio);
     
-    public const float ViewportHeight = 2f;
-    public const float ViewportWidth = ViewportHeight * AspectRatio;
-    public const float FocalLength = 1f;
+    public const int SamplesPerPixel = 100;
 
     public readonly Color SkyColor = new(0.5f, 0.7f, 1f);
+    public readonly Random Random = new();
 
     public static void Main()
     {
@@ -46,21 +44,18 @@ public class Program
         return Color.One * (1f - t) + SkyColor * t;
     }
 
-    [SuppressMessage("ReSharper.DPA", "DPA0002: Excessive memory allocations in SOH", MessageId = "type: InOneWeekend.Ray")]
+    [SuppressMessage("ReSharper.DPA", "DPA0001: Memory allocation issues")]
     public void Run()
     {
         Log.Information("Creating a {Width}x{Height} image", ImageWidth, ImageHeight);
-
-        var origin = Point.Zero;
-        var horizontal = Vector3.UnitX * ViewportWidth;
-        var vertical = Vector3.UnitY * ViewportHeight;
-        var lowerLeftCorner = origin - horizontal / 2f - vertical / 2f - Vector3.UnitZ * FocalLength;
         
         var bitmap = new Image<Rgba32>(ImageWidth, ImageHeight);
 
         var world = new HittableList();
         world.Add(new Sphere(new Point(0, 0, -1), 0.5f));
         world.Add(new Sphere(new Point(0, -100.5f, -1), 100));
+        
+        var camera = new Camera();
         
         var time = DateTime.Now;
 
@@ -69,10 +64,16 @@ public class Program
             var j = ImageHeight - y - 1;
             for (var i = 0; i < ImageWidth; i++)
             {
-                var u = (float) i / (ImageWidth - 1);
-                var v = (float) j / (ImageHeight - 1);
-                var ray = new Ray(origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
-                var color = RayColor(ray, world);
+                var color = Color.Zero;
+                for (var k = 0; k < SamplesPerPixel; k++)
+                {
+                    var u = (float) (i + Random.NextDouble()) / (ImageWidth - 1);
+                    var v = (float) (j + Random.NextDouble()) / (ImageHeight - 1);
+                    var ray = camera.GetRay(u, v);
+                    color += RayColor(ray, world);
+                }
+
+                color /= SamplesPerPixel;
                 bitmap[i, y] = ColorToRgba32(color);
             }
         });
