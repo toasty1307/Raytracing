@@ -77,7 +77,12 @@ public class Program
         world.Add(new Sphere(new Vector3(-1,       0, -1),-0.4f,   materialLeft));
         world.Add(new Sphere(new Vector3( 1,       0, -1), 0.5f,  materialRight));
         
-        var camera = new Camera();
+        var r = MathF.Cos(MathF.PI / 4);
+
+        var lookFrom = new Point(-2, 2, 1);
+        var lookAt = new Point(0, 0, -1);
+        var up = Vector3.UnitY;
+        var camera = new Camera(lookFrom, lookAt, up, 20f, AspectRatio);
         
         var time = DateTime.Now;
 
