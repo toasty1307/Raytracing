@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Serilog;
 using SixLabors.ImageSharp;
@@ -10,10 +11,11 @@ namespace InOneWeekend;
 public class Program
 {
     public const float AspectRatio = 16f / 9f;
-    public const int ImageWidth = 1920;
+    public const int ImageWidth = 480;
     public const int ImageHeight = (int) (ImageWidth / AspectRatio);
     
-    public const int SamplesPerPixel = 100;
+    public const int SamplesPerPixel = 50;
+    public const int MaxDepth = 2;
 
     public readonly Color SkyColor = new(0.5f, 0.7f, 1f);
     public readonly Random Random = new();
@@ -32,12 +34,17 @@ public class Program
         Log.Information("Time taken: {Time}", DateTime.Now - time);
     }
     
-    public Color RayColor(Ray ray, Hittable world)
+    public Color RayColor(Ray ray, Hittable world, int depth)
     {
         var rec = new HitRecord();
-        if (world.Hit(ray, 0, float.PositiveInfinity, ref rec))
+
+        if (depth <= 0)
+            return Color.Zero;
+        
+        if (world.Hit(ray, 0.001f, float.PositiveInfinity, ref rec))
         {
-            return 0.5f * (rec.Normal + Color.One);
+            var target = rec.Point + Random.NextInHemisphere(rec.Normal);
+            return 0.5f * RayColor(new Ray(rec.Point, target - rec.Point), world, depth - 1);
         }
         var unitDirection = ray.Direction.Normalized();
         var t = unitDirection.Y / 2 + .5f;
@@ -70,11 +77,10 @@ public class Program
                     var u = (float) (i + Random.NextDouble()) / (ImageWidth - 1);
                     var v = (float) (j + Random.NextDouble()) / (ImageHeight - 1);
                     var ray = camera.GetRay(u, v);
-                    color += RayColor(ray, world);
+                    color += RayColor(ray, world, MaxDepth);
                 }
 
-                color /= SamplesPerPixel;
-                bitmap[i, y] = ColorToRgba32(color);
+                WriteColor(bitmap, color, i, y);
             }
         });
 
@@ -86,6 +92,16 @@ public class Program
         Log.Information("Saved image");
         Log.Information("Time taken to save image: {Time}", DateTime.Now - time);
         Process.Start(new ProcessStartInfo("image.png") { UseShellExecute = true });
+    }
+
+    private void WriteColor(Image<Rgba32> bitmap, Vector3 color, int x, int y)
+    {
+        const float scale = 1f / SamplesPerPixel;
+        color.X = MathF.Sqrt(scale * color.X);
+        color.Y = MathF.Sqrt(scale * color.Y);
+        color.Z = MathF.Sqrt(scale * color.Z);
+                
+        bitmap[x, y] = ColorToRgba32(color);
     }
 
     private void MoveCursor()
