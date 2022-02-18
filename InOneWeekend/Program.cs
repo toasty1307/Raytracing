@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using Serilog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -7,8 +9,15 @@ namespace InOneWeekend;
 
 public class Program
 {
-    public const int ImageWidth = 64 * 64 * 4;
-    public const int ImageHeight = 64 * 64 * 4;
+    public const float AspectRatio = 16f / 9f;
+    public const int ImageWidth = 1920;
+    public const int ImageHeight = (int) (ImageWidth / AspectRatio);
+    
+    public const float ViewportHeight = 2f;
+    public const float ViewportWidth = ViewportHeight * AspectRatio;
+    public const float FocalLength = 1f;
+
+    public readonly Color SkyColor = new(0.5f, 0.7f, 1f);
 
     public static void Main()
     {
@@ -24,39 +33,38 @@ public class Program
         Log.Information("Time taken: {Time}", DateTime.Now - time);
     }
 
+    public Color RayColor(Ray ray)
+    {
+        var unitDirection = ray.Direction.Normalized();
+        var t = unitDirection.Y / 2 + .5f;
+        return Color.One * (1f - t) + SkyColor * t;
+    }
+
     public void Run()
     {
         Log.Information("Creating a {Width}x{Height} image", ImageWidth, ImageHeight);
 
+        var origin = Point.Zero;
+        var horizontal = Vector3.UnitX * ViewportWidth;
+        var vertical = Vector3.UnitY * ViewportHeight;
+        var lowerLeftCorner = origin - horizontal / 2f - vertical / 2f - Vector3.UnitZ * FocalLength;
+        
         var bitmap = new Image<Rgba32>(ImageWidth, ImageHeight);
         var time = DateTime.Now;
-        // parallel takes ~2 seconds
+
         Parallel.For(0, ImageHeight, y =>
         {
-            for (var x = 0; x < ImageWidth; x++)
-            {
-                var r = (float) x / ImageWidth;
-                var g = (float) y / ImageHeight;
-                var color = new Rgba32(r, g, .65f);
-                bitmap[x, y] = color;
-            }
-        });
-        // normal method, takes ~10 seconds
-        /*
-        for (var j = ImageHeight - 1; j >= 0; j--)
-        {
+            var j = ImageHeight - y - 1;
             for (var i = 0; i < ImageWidth; i++)
             {
-                var r = (float) i / (ImageWidth - 1);
-                var g = (float) j / (ImageHeight - 1);
-
-                bitmap[i, j] = new Rgba32(r, g, .65f);
+                var u = (float) i / (ImageWidth - 1);
+                var v = (float) j / (ImageHeight - 1);
+                var ray = new Ray(origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
+                var color = RayColor(ray);
+                bitmap[i, y] = ColorToRgba32(color);
             }
-            // logging takes a lot of time
-            // Log.Information("{Percent:0.0}% Done", (ImageHeight - j) / (float) ImageHeight * 100);
-            // MoveCursor();
-        }
-        */
+        });
+
         Log.Information("Time taken to create image: {Time}", DateTime.Now - time);
         
         Log.Information("Saving image");
@@ -72,4 +80,7 @@ public class Program
         var top = Console.GetCursorPosition().Top;
         Console.SetCursorPosition(0, top - 1);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Rgba32 ColorToRgba32(Color color) => new(color.X, color.Y, color.Z);
 }
