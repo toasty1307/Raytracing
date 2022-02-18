@@ -39,4 +39,15 @@ public static class Extenions
             ? inUnitSphere 
             : -inUnitSphere;
     }
+    
+    public static Vector3 NextInUnitDisk(this Random random)
+    {
+        while (true)
+        {
+            var p = new Vector3(random.NextSingle(-1f, 1f), random.NextSingle(-1f, 1f), 0f);
+            if (p.LengthSquared() >= 1f)
+                continue;
+            return p;
+        }
+    }
 }

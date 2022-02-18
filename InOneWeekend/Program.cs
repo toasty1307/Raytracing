@@ -11,11 +11,13 @@ namespace InOneWeekend;
 public class Program
 {
     public const float AspectRatio = 16f / 9f;
-    public const int ImageWidth = 480;
+    public const int ImageWidth = 1920;
     public const int ImageHeight = (int) (ImageWidth / AspectRatio);
     
-    public const int SamplesPerPixel = 50;
+    public const int SamplesPerPixel = 200;
     public const int MaxDepth = 50;
+
+    public const int SpheresHalfRow = 5;
 
     public readonly Color SkyColor = new(0.5f, 0.7f, 1f);
     private readonly Random _random = new();
@@ -34,6 +36,7 @@ public class Program
         Log.Information("Time taken: {Time}", DateTime.Now - time);
     }
     
+    [SuppressMessage("ReSharper.DPA", "DPA0001: Memory allocation issues")]
     public Color RayColor(Ray ray, Hittable world, int depth)
     {
         var rec = new HitRecord();
@@ -58,11 +61,11 @@ public class Program
     [SuppressMessage("ReSharper.DPA", "DPA0001: Memory allocation issues")]
     public void Run()
     {
-        Log.Information("Creating a {Width}x{Height} image", ImageWidth, ImageHeight);
-        
         var bitmap = new Image<Rgba32>(ImageWidth, ImageHeight);
 
-        var world = new HittableList();
+        var world = RandomScene();
+
+        Log.Information("Creating a {Width}x{Height} image", ImageWidth, ImageHeight);
 
         var materialGround = new Lambertian(new Color(0.8f, 0.8f, 0.0f));
         var materialCenter = new Lambertian(new Color(0.1f, 0.2f, 0.5f));
@@ -77,13 +80,14 @@ public class Program
         world.Add(new Sphere(new Vector3(-1,       0, -1),-0.4f,   materialLeft));
         world.Add(new Sphere(new Vector3( 1,       0, -1), 0.5f,  materialRight));
         
-        var r = MathF.Cos(MathF.PI / 4);
-
-        var lookFrom = new Point(-2, 2, 1);
-        var lookAt = new Point(0, 0, -1);
+        var lookFrom = new Point(13, 2, 3);
+        var lookAt = new Point(0, 0, 0);
         var up = Vector3.UnitY;
-        var camera = new Camera(lookFrom, lookAt, up, 20f, AspectRatio);
-        
+        var focusDist = 10f;
+        var camera = new Camera(lookFrom, lookAt, up, 20f, AspectRatio, 0.1f, focusDist);
+
+        var n = 0;
+        var lastPercent = 0;
         var time = DateTime.Now;
 
         Parallel.For(0, ImageHeight, y =>
@@ -101,6 +105,16 @@ public class Program
                 }
 
                 WriteColor(bitmap, color, i, y);
+            }
+
+            n++;
+            var percent = (int)((float) n / ImageHeight * 100);
+            if (percent != lastPercent)
+            {
+                if (n == 1)
+                    Log.Information("Approximate time remaining: {Time}", (DateTime.Now - time) * (ImageHeight - n));
+                Log.Information("Completed {N}%", lastPercent = percent);
+                MoveCursor();
             }
         });
 
@@ -132,4 +146,63 @@ public class Program
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Rgba32 ColorToRgba32(Color color) => new(color.X, color.Y, color.Z);
+
+    public HittableList RandomScene()
+    {
+        var world = new HittableList();
+
+        var groundMaterial = new Lambertian(Vector3.One * 0.5f);
+        world.Add(new Sphere(new Vector3(0, -1000, 0), 1000, groundMaterial));
+        
+        for (var i = -SpheresHalfRow; i < SpheresHalfRow; i++)
+        {
+            for (var j = -SpheresHalfRow; j < SpheresHalfRow; j++)
+            {
+                var chooseMat = _random.NextSingle();
+                var center = new Vector3(i + 0.9f * _random.NextSingle(), 0.2f,
+                    j + 0.9f * _random.NextSingle());
+
+                if ((center - new Vector3(4, 0.2f, 0)).Length() > 0.9)
+                {
+                    Material sphereMaterial;
+
+                    if (chooseMat < 0.8)
+                    {
+                        // diffuse
+                        sphereMaterial = new Lambertian(new Vector3(
+                            _random.NextSingle() * _random.NextSingle(),
+                            _random.NextSingle() * _random.NextSingle(),
+                            _random.NextSingle() * _random.NextSingle()));
+                        world.Add(new Sphere(center, 0.2f, sphereMaterial));
+                    }
+                    else if (chooseMat < 0.95)
+                    {
+                        // le metal
+                        sphereMaterial = new Metal(new Vector3(0.5f * (1 + _random.NextSingle()),
+                            0.5f * (1 + _random.NextSingle()),
+                            0.5f * (1 + _random.NextSingle())), 0.5f * _random.NextSingle());
+                        world.Add(new Sphere(center, 0.2f, sphereMaterial));
+                    }
+                    else
+                    {
+                        sphereMaterial = new Dielectric(1.5f);
+                        world.Add(new Sphere(center, 0.2f, sphereMaterial));
+                    }
+                }
+            }
+        }
+
+
+        // three big balls
+        var material1 = new Dielectric(1.5f);
+        world.Add(new Sphere(new Vector3(0, 1, 0), 1, material1));
+
+        var material2 = new Lambertian(new Vector3(0.4f, 0.2f, 0.1f));
+        world.Add(new Sphere(new Vector3(-4, 1, 0), 1, material2));
+
+        var material3 = new Metal(new Vector3(0.7f, 0.6f, 0.5f), 0.0f);
+        world.Add(new Sphere(new Vector3(4, 1, 0), 1, material3));
+
+        return world;
+    }
 }
