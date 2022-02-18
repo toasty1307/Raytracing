@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Serilog;
@@ -32,26 +33,20 @@ public class Program
         program.Run();
         Log.Information("Time taken: {Time}", DateTime.Now - time);
     }
-
-    public bool HitSphere(Point center, float radius, Ray ray)
+    
+    public Color RayColor(Ray ray, Hittable world)
     {
-        var oc = ray.Origin - center;
-        var a = ray.Direction.Dot(ray.Direction);
-        var b = oc.Dot(ray.Direction) * 2f;
-        var c = oc.Dot(oc) - radius * radius;
-        var discriminant = b * b - 4 * a * c;
-        return discriminant > 0;
-    }
-
-    public Color RayColor(Ray ray)
-    {
-        if (HitSphere(Point.UnitZ * -1, 0.5f, ray))
-            return Color.UnitX;
+        var rec = new HitRecord();
+        if (world.Hit(ray, 0, float.PositiveInfinity, ref rec))
+        {
+            return 0.5f * (rec.Normal + Color.One);
+        }
         var unitDirection = ray.Direction.Normalized();
         var t = unitDirection.Y / 2 + .5f;
         return Color.One * (1f - t) + SkyColor * t;
     }
 
+    [SuppressMessage("ReSharper.DPA", "DPA0002: Excessive memory allocations in SOH", MessageId = "type: InOneWeekend.Ray")]
     public void Run()
     {
         Log.Information("Creating a {Width}x{Height} image", ImageWidth, ImageHeight);
@@ -62,6 +57,11 @@ public class Program
         var lowerLeftCorner = origin - horizontal / 2f - vertical / 2f - Vector3.UnitZ * FocalLength;
         
         var bitmap = new Image<Rgba32>(ImageWidth, ImageHeight);
+
+        var world = new HittableList();
+        world.Add(new Sphere(new Point(0, 0, -1), 0.5f));
+        world.Add(new Sphere(new Point(0, -100.5f, -1), 100));
+        
         var time = DateTime.Now;
 
         Parallel.For(0, ImageHeight, y =>
@@ -72,7 +72,7 @@ public class Program
                 var u = (float) i / (ImageWidth - 1);
                 var v = (float) j / (ImageHeight - 1);
                 var ray = new Ray(origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
-                var color = RayColor(ray);
+                var color = RayColor(ray, world);
                 bitmap[i, y] = ColorToRgba32(color);
             }
         });
