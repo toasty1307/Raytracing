@@ -33,8 +33,20 @@ public class Program
         Log.Information("Time taken: {Time}", DateTime.Now - time);
     }
 
+    public bool HitSphere(Point center, float radius, Ray ray)
+    {
+        var oc = ray.Origin - center;
+        var a = ray.Direction.Dot(ray.Direction);
+        var b = oc.Dot(ray.Direction) * 2f;
+        var c = oc.Dot(oc) - radius * radius;
+        var discriminant = b * b - 4 * a * c;
+        return discriminant > 0;
+    }
+
     public Color RayColor(Ray ray)
     {
+        if (HitSphere(Point.UnitZ * -1, 0.5f, ray))
+            return Color.UnitX;
         var unitDirection = ray.Direction.Normalized();
         var t = unitDirection.Y / 2 + .5f;
         return Color.One * (1f - t) + SkyColor * t;
