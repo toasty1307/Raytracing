@@ -118,7 +118,7 @@ public class Program
                 }
                 Log.Information("Completed {N}%", lastPercent = percent);
                 MoveCursor();
-                bitmap.SaveAsPng($"output{n}.png");
+                bitmap.SaveAsPng($"output{y}.png");
             }
         });
 
